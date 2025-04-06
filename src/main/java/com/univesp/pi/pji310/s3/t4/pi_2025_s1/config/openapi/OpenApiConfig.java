@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
         ),
         security = @SecurityRequirement(name = "bearerAuth"),
         servers = {
-                @Server(url = "${inarisys.openapi.server-url:https://inarisys.koyeb.app}")
+                @Server(url = "${inarisys.openapi.server-url}")
         }
 )
 public class OpenApiConfig {
