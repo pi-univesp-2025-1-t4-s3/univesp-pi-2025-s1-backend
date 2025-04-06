@@ -3,6 +3,7 @@ package com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller;
 import com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller.dto.AuthRequest;
 import com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller.dto.AuthResponse;
 import com.univesp.pi.pji310.s3.t4.pi_2025_s1.service.security.JwtService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "Autenticação - Login")
 public class AuthController {
 
     private final AuthenticationManager authManager;
