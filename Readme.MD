@@ -31,7 +31,7 @@ Este projeto é o backend da aplicação desenvolvida para o Projeto Integrador 
 2. No projeto, edite o arquivo `src/main/resources/application-local.properties` para apontar para sua instância do banco. Exemplo:
 
    ```properties
-   spring.datasource.url=jdbc:postgresql://localhost:5432/inarisys
+   spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
    spring.datasource.username=postgres
    spring.datasource.password=postgres
    spring.datasource.driver-class-name=org.postgresql.Driver
