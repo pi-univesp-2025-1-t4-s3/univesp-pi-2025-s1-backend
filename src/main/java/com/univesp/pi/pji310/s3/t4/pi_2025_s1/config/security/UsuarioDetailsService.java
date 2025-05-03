@@ -1,6 +1,6 @@
 package com.univesp.pi.pji310.s3.t4.pi_2025_s1.config.security;
 
-import com.univesp.pi.pji310.s3.t4.pi_2025_s1.repository.UsuarioRepository;
+import com.univesp.pi.pji310.s3.t4.pi_2025_s1.repository.security.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

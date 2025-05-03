@@ -1,4 +1,4 @@
-package com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller;
+package com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller.security;
 
 import com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller.dto.AuthRequest;
 import com.univesp.pi.pji310.s3.t4.pi_2025_s1.controller.dto.AuthResponse;

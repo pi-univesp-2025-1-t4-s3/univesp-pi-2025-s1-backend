@@ -1,5 +1,7 @@
+-- Perfis de usuário
 INSERT INTO perfil (nome) VALUES ('ROLE_ADMIN');
 
+-- Usuários
 INSERT INTO usuario (nome, email, senha_hash, enabled, perfil_id)
 VALUES (
     'Administrador',
