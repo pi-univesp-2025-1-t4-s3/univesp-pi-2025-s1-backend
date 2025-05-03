@@ -69,7 +69,7 @@ Esse comando faz:
 
 ## 🔐 Login padrão
 
-- **Email:** `admin@inarisys.com`
+- **Email:** `admin`
 - **Senha:** `admininarisys2025`
 
 ---
