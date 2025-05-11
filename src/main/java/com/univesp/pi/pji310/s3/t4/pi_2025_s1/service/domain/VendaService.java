@@ -19,18 +19,18 @@ public class VendaService {
 
     public Venda salvar(Venda venda) {
 
-        if (venda.getItens() != null) {
-            venda.getItens().forEach(item -> item.setVenda(venda));
+        if (venda.getItens() == null || venda.getItens().isEmpty()) {
+            throw new IllegalArgumentException("Venda deve conter pelo menos um item.");
         }
 
-        Venda salva = vendaRepository.save(venda);
+        venda.getItens().forEach(item -> item.setVenda(venda));
 
-        // Debita o estoque após a venda
-        salva.getItens().forEach(item ->
+        // Valida e debita o estoque ANTES de salvar
+        venda.getItens().forEach(item ->
                 estoqueService.decrementarQuantidadePorProduto(item.getProduto().getId(), item.getQuantidade())
         );
 
-        return salva;
+        return vendaRepository.save(venda);
     }
 
     @Transactional
@@ -43,22 +43,22 @@ public class VendaService {
                 estoqueService.incrementarQuantidadePorProduto(itemAntigo.getProduto().getId(), itemAntigo.getQuantidade())
         );
 
+        // Preparar nova lista de itens e validar débito de estoque
+        List<ItemVenda> novosItens = novaVenda.getItens();
+        for (ItemVenda item : novosItens) {
+            estoqueService.decrementarQuantidadePorProduto(item.getProduto().getId(), item.getQuantidade());
+        }
+
+        // Atualizar dados após validações
         existente.setData(novaVenda.getData());
         existente.getItens().clear();
 
-        for (ItemVenda novoItem : novaVenda.getItens()) {
+        for (ItemVenda novoItem : novosItens) {
             novoItem.setVenda(existente);
             existente.getItens().add(novoItem);
         }
 
-        Venda atualizada = vendaRepository.save(existente);
-
-        // Debita estoque dos novos itens
-        atualizada.getItens().forEach(itemNovo ->
-                estoqueService.decrementarQuantidadePorProduto(itemNovo.getProduto().getId(), itemNovo.getQuantidade())
-        );
-
-        return atualizada;
+        return vendaRepository.save(existente);
     }
 
     public Venda buscarPorId(Long id) {

@@ -122,23 +122,39 @@ public class VendaIntegrationTest {
         assertNotNull(produtoCriado);
         assertNotNull(produtoCriado.getId());
 
-        // Tentar criar venda com 10 unidades (excedente)
+        // Tentar criar venda com 10 unidades (sem adicionar estoque)
         Venda venda = new Venda();
         venda.setData(LocalDate.now());
 
         ItemVenda item = new ItemVenda();
         item.setProduto(produtoCriado);
-        item.setQuantidade(10); // maior que o estoque disponível
+        item.setQuantidade(10);
 
         venda.setItens(List.of(item));
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Venda> request = new HttpEntity<>(venda, headers);
+
         ResponseEntity<String> respostaErro = restTemplate.postForEntity(
-                baseUrl("/vendas"), venda, String.class
+                baseUrl("/vendas"), request, String.class
         );
 
         // Deve retornar 400 com mensagem de erro
         assertEquals(HttpStatus.BAD_REQUEST, respostaErro.getStatusCode());
         assertTrue(respostaErro.getBody().contains("Estoque insuficiente"));
-    }
 
+        // Verificar que nenhuma venda foi registrada
+        ResponseEntity<Venda[]> vendasResponse = restTemplate.getForEntity(
+                baseUrl("/vendas"), Venda[].class
+        );
+
+        Venda[] vendas = vendasResponse.getBody();
+        assertNotNull(vendas);
+        boolean contemVenda = List.of(vendas).stream()
+                .anyMatch(v -> v.getItens().stream()
+                        .anyMatch(i -> i.getProduto().getId().equals(produtoCriado.getId())));
+
+        assertFalse(contemVenda, "Venda não deveria ter sido registrada no banco");
+    }
 }
