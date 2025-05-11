@@ -104,4 +104,41 @@ public class VendaIntegrationTest {
         assertEquals(HttpStatus.OK, estoqueAposAtualizacao.getStatusCode());
         assertEquals(7, estoqueAposAtualizacao.getBody().getQuantidade());
     }
+
+    @Test
+    void deveRejeitarVendaComEstoqueInsuficiente() {
+        // Criar produto
+        Produto produto = new Produto();
+        produto.setNome("Inseticida Natural");
+        produto.setDescricao("Produto biodegradável");
+        produto.setPreco(BigDecimal.valueOf(29.90));
+
+        ResponseEntity<Produto> respostaProduto = restTemplate.postForEntity(
+                baseUrl("/produtos"), produto, Produto.class
+        );
+
+        assertEquals(HttpStatus.CREATED, respostaProduto.getStatusCode());
+        Produto produtoCriado = respostaProduto.getBody();
+        assertNotNull(produtoCriado);
+        assertNotNull(produtoCriado.getId());
+
+        // Tentar criar venda com 10 unidades (excedente)
+        Venda venda = new Venda();
+        venda.setData(LocalDate.now());
+
+        ItemVenda item = new ItemVenda();
+        item.setProduto(produtoCriado);
+        item.setQuantidade(10); // maior que o estoque disponível
+
+        venda.setItens(List.of(item));
+
+        ResponseEntity<String> respostaErro = restTemplate.postForEntity(
+                baseUrl("/vendas"), venda, String.class
+        );
+
+        // Deve retornar 400 com mensagem de erro
+        assertEquals(HttpStatus.BAD_REQUEST, respostaErro.getStatusCode());
+        assertTrue(respostaErro.getBody().contains("Estoque insuficiente"));
+    }
+
 }
