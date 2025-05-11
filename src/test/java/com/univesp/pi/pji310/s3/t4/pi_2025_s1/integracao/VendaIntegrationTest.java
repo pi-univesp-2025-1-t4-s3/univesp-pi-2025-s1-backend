@@ -157,4 +157,170 @@ public class VendaIntegrationTest {
 
         assertFalse(contemVenda, "Venda não deveria ter sido registrada no banco");
     }
+
+    @Test
+    void deveFazerRollbackSeEstoqueInsuficienteParaUmDosItens() {
+        // Criar dois produtos
+        Produto produto1 = new Produto();
+        produto1.setNome("Produto A");
+        produto1.setDescricao("Estoque suficiente");
+        produto1.setPreco(BigDecimal.valueOf(10.00));
+
+        Produto produto2 = new Produto();
+        produto2.setNome("Produto B");
+        produto2.setDescricao("Estoque insuficiente");
+        produto2.setPreco(BigDecimal.valueOf(20.00));
+
+        Produto criado1 = restTemplate.postForEntity(baseUrl("/produtos"), produto1, Produto.class).getBody();
+        Produto criado2 = restTemplate.postForEntity(baseUrl("/produtos"), produto2, Produto.class).getBody();
+
+        assertNotNull(criado1);
+        assertNotNull(criado2);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Integer> estoqueRequest = new HttpEntity<>(5, headers);
+
+        restTemplate.postForEntity(
+                baseUrl("/estoques/produto/" + criado1.getId() + "/incrementar"),
+                estoqueRequest,
+                Void.class
+        );
+
+        // Montar venda com dois itens: um com estoque suficiente, outro não
+        ItemVenda item1 = new ItemVenda();
+        item1.setProduto(criado1);
+        item1.setQuantidade(3); // válido
+
+        ItemVenda item2 = new ItemVenda();
+        item2.setProduto(criado2);
+        item2.setQuantidade(1); // sem estoque
+
+        Venda venda = new Venda();
+        venda.setData(LocalDate.now());
+        venda.setItens(List.of(item1, item2));
+
+        HttpEntity<Venda> request = new HttpEntity<>(venda, headers);
+
+        ResponseEntity<String> respostaErro = restTemplate.postForEntity(
+                baseUrl("/vendas"), request, String.class
+        );
+
+        // Deve retornar erro por estoque insuficiente
+        assertEquals(HttpStatus.BAD_REQUEST, respostaErro.getStatusCode());
+        assertTrue(respostaErro.getBody().contains("Estoque insuficiente"));
+
+        // Verificar que a venda NÃO foi salva
+        ResponseEntity<Venda[]> vendasResponse = restTemplate.getForEntity(baseUrl("/vendas"), Venda[].class);
+        assertNotNull(vendasResponse.getBody());
+
+        boolean contemVenda = List.of(vendasResponse.getBody()).stream()
+                .anyMatch(v -> v.getItens().stream()
+                        .anyMatch(i -> i.getProduto().getId().equals(criado1.getId()) ||
+                                i.getProduto().getId().equals(criado2.getId())));
+        assertFalse(contemVenda, "A venda não deveria ter sido salva");
+
+        // Verificar que o estoque do produto1 continua intacto (5 unidades)
+        ResponseEntity<Estoque> estoqueProduto1 = restTemplate.getForEntity(
+                baseUrl("/estoques/produto/" + criado1.getId()), Estoque.class
+        );
+
+        assertEquals(HttpStatus.OK, estoqueProduto1.getStatusCode());
+        assertEquals(5, estoqueProduto1.getBody().getQuantidade());
+    }
+
+    @Test
+    void deveFazerRollbackNaAtualizacaoSeEstoqueInsuficienteParaNovoItem() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // Criar dois produtos
+        Produto produto1 = new Produto();
+        produto1.setNome("Produto Atualizável");
+        produto1.setDescricao("Com estoque");
+        produto1.setPreco(BigDecimal.valueOf(15.00));
+
+        Produto produto2 = new Produto();
+        produto2.setNome("Produto Sem Estoque");
+        produto2.setDescricao("Sem estoque");
+        produto2.setPreco(BigDecimal.valueOf(25.00));
+
+        Produto criado1 = restTemplate.postForEntity(baseUrl("/produtos"), produto1, Produto.class).getBody();
+        Produto criado2 = restTemplate.postForEntity(baseUrl("/produtos"), produto2, Produto.class).getBody();
+
+        assertNotNull(criado1);
+        assertNotNull(criado2);
+
+        // Incrementar estoque apenas para produto1
+        HttpEntity<Integer> estoqueRequest = new HttpEntity<>(5, headers);
+        restTemplate.postForEntity(
+                baseUrl("/estoques/produto/" + criado1.getId() + "/incrementar"),
+                estoqueRequest,
+                Void.class
+        );
+
+        // Criar venda inicial com produto1
+        ItemVenda itemInicial = new ItemVenda();
+        itemInicial.setProduto(criado1);
+        itemInicial.setQuantidade(2);
+
+        Venda venda = new Venda();
+        venda.setData(LocalDate.now());
+        venda.setItens(List.of(itemInicial));
+
+        Venda vendaCriada = restTemplate.postForEntity(
+                baseUrl("/vendas"), new HttpEntity<>(venda, headers), Venda.class
+        ).getBody();
+
+        assertNotNull(vendaCriada);
+        Long vendaId = vendaCriada.getId();
+
+        // Verificar estoque atual: 5 - 2 = 3
+        Estoque estoqueAntes = restTemplate.getForEntity(
+                baseUrl("/estoques/produto/" + criado1.getId()), Estoque.class
+        ).getBody();
+        assertEquals(3, estoqueAntes.getQuantidade());
+
+        // Tentar atualizar venda: manter produto1, adicionar produto2 (sem estoque)
+        ItemVenda novoItem1 = new ItemVenda();
+        novoItem1.setProduto(criado1);
+        novoItem1.setQuantidade(1);
+
+        ItemVenda novoItem2 = new ItemVenda();
+        novoItem2.setProduto(criado2);
+        novoItem2.setQuantidade(1); // sem estoque
+
+        vendaCriada.setItens(List.of(novoItem1, novoItem2));
+
+        HttpEntity<Venda> requestAtualizacao = new HttpEntity<>(vendaCriada, headers);
+
+        ResponseEntity<String> respostaErro = restTemplate.exchange(
+                baseUrl("/vendas/" + vendaId),
+                HttpMethod.PUT,
+                requestAtualizacao,
+                String.class
+        );
+
+        // Verificar que falhou com BAD_REQUEST
+        assertEquals(HttpStatus.BAD_REQUEST, respostaErro.getStatusCode());
+        assertTrue(respostaErro.getBody().contains("Estoque insuficiente"));
+
+        // Verificar que venda original não foi alterada
+        Venda vendaAposErro = restTemplate.getForEntity(
+                baseUrl("/vendas/" + vendaId), Venda.class
+        ).getBody();
+
+        assertNotNull(vendaAposErro);
+        assertEquals(1, vendaAposErro.getItens().size());
+        assertEquals(criado1.getId(), vendaAposErro.getItens().get(0).getProduto().getId());
+        assertEquals(2, vendaAposErro.getItens().get(0).getQuantidade());
+
+        // Verificar que estoque de produto1 continua como estava (3)
+        Estoque estoqueFinal = restTemplate.getForEntity(
+                baseUrl("/estoques/produto/" + criado1.getId()), Estoque.class
+        ).getBody();
+        assertEquals(3, estoqueFinal.getQuantidade());
+    }
+
+
 }

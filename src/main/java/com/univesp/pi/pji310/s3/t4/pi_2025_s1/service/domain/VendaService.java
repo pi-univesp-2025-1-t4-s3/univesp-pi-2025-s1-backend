@@ -17,6 +17,7 @@ public class VendaService {
     private final VendaRepository vendaRepository;
     private final EstoqueService estoqueService;
 
+    @Transactional
     public Venda salvar(Venda venda) {
 
         if (venda.getItens() == null || venda.getItens().isEmpty()) {
