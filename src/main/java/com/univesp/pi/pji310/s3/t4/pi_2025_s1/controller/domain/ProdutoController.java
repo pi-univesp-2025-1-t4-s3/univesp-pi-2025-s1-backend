@@ -46,9 +46,19 @@ public class ProdutoController {
             @ApiResponse(responseCode = "200", description = "Produto encontrado"),
             @ApiResponse(responseCode = "404", description = "Produto não encontrado")
     })
+
     @GetMapping("/{id}")
     public ResponseEntity<Produto> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(produtoService.buscarPorId(id));
+    }
+
+    @Operation(summary = "Buscar produtos por nome")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Produtos encontrados")
+    })
+    @GetMapping("/busca")
+    public ResponseEntity<List<Produto>> buscarPorNome(@RequestParam String nome) {
+        return ResponseEntity.ok(produtoService.buscarPorNome(nome));
     }
 
     @Operation(summary = "Atualizar produto")

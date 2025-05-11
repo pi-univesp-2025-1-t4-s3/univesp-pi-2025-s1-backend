@@ -23,6 +23,10 @@ public class ProdutoService {
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado: " + id));
     }
 
+    public List<Produto> buscarPorNome(String nome) {
+        return produtoRepository.findByNomeContainingIgnoreCase(nome);
+    }
+
     public List<Produto> listarTodos() {
         return produtoRepository.findAll();
     }
