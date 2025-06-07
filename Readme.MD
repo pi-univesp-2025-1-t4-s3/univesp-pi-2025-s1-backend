@@ -1,5 +1,7 @@
 # [Link do backend da nuvem](https://inarisys.koyeb.app/)
 
+# [Link do swagger](http://inarisys.koyeb.app/swagger-ui/index.html#/)
+
 # Projeto Univesp PI 2025 S1 - Backend
 
 Este projeto é o backend da aplicação desenvolvida para o Projeto Integrador da Univesp (Turma 2025 S1).
